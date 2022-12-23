@@ -162,7 +162,7 @@ public:
   //Call the visitor for each node of the tree.
   void applyVisitor(const std::function<void(TreeNode*)>& visitor);
 
-  uint16_t assignUID(TreeNode& node);
+  uint16_t getUID();
 
 
 private:
@@ -303,18 +303,17 @@ public:
   template <typename T, typename... ExtraArgs>
   void registerNodeType(const std::string& ID, ExtraArgs... args)
   {
+    // clang-format off
     static_assert(std::is_base_of<ActionNodeBase, T>::value ||
                       std::is_base_of<ControlNode, T>::value ||
                       std::is_base_of<DecoratorNode, T>::value ||
                       std::is_base_of<ConditionNode, T>::value,
                   "[registerNode]: accepts only classed derived from either "
-                  "ActionNodeBase, "
-                  "DecoratorNode, ControlNode or ConditionNode");
+                  "ActionNodeBase, DecoratorNode, ControlNode or ConditionNode");
 
-    static_assert(!std::is_abstract<T>::value, "[registerNode]: Some methods are pure "
-                                               "virtual. "
-                                               "Did you override the methods tick() and "
-                                               "halt()?");
+    static_assert(!std::is_abstract<T>::value,
+                  "[registerNode]: Some methods are pure virtual. "
+                  "Did you override the methods tick() and halt()?");
 
     constexpr bool default_constructable =
         std::is_constructible<T, const std::string&>::value;
@@ -323,7 +322,6 @@ public:
                               ExtraArgs...>::value;
     constexpr bool has_static_ports_list = has_static_method_providedPorts<T>::value;
 
-    // clang-format off
     static_assert(default_constructable || param_constructable,
        "[registerNode]: the registered class must have at least one of these two constructors:\n"
        "  (const std::string&, const NodeConfig&) or (const std::string&)\n"
@@ -345,18 +343,17 @@ public:
   template <typename T>
   void registerNodeType(const std::string& ID, PortsList ports)
   {
+    // clang-format off
     static_assert(std::is_base_of<ActionNodeBase, T>::value ||
                       std::is_base_of<ControlNode, T>::value ||
                       std::is_base_of<DecoratorNode, T>::value ||
                       std::is_base_of<ConditionNode, T>::value,
                   "[registerNode]: accepts only classed derived from either "
-                  "ActionNodeBase, "
-                  "DecoratorNode, ControlNode or ConditionNode");
+                  "ActionNodeBase, DecoratorNode, ControlNode or ConditionNode");
 
-    static_assert(!std::is_abstract<T>::value, "[registerNode]: Some methods are pure "
-                                               "virtual. "
-                                               "Did you override the methods tick() and "
-                                               "halt()?");
+    static_assert(!std::is_abstract<T>::value,
+                  "[registerNode]: Some methods are pure virtual. "
+                  "Did you override the methods tick() and halt()?");
 
     constexpr bool default_constructable =
         std::is_constructible<T, const std::string&>::value;
@@ -364,26 +361,22 @@ public:
         std::is_constructible<T, const std::string&, const NodeConfig&>::value;
     constexpr bool has_static_ports_list = has_static_method_providedPorts<T>::value;
 
-    static_assert(default_constructable || param_constructable, "[registerNode]: the "
-                                                                "registered class must "
-                                                                "have at "
-                                                                "least one of these two "
-                                                                "constructors: (const "
-                                                                "std::string&, const "
-                                                                "NodeConfig&) or (const "
-                                                                "std::string&).");
+    static_assert(default_constructable || param_constructable,
+                  "[registerNode]: the registered class must have at "
+                  "least one of these two constructors: "
+                  "(const std::string&, const NodeConfig&) or "
+                  "(const std::string&).");
 
     static_assert(!has_static_ports_list, "[registerNode]: ports are passed to this node "
-                                          "explicitly. The static method"
-                                          "providedPorts() should be removed to avoid "
-                                          "ambiguities\n");
+                                          "explicitly. The static method providedPorts() "
+                                          "should be removed to avoid ambiguities\n");
 
     static_assert(param_constructable, "[registerNode]: since this node has ports, "
-                                       "you MUST add a constructor sign signature (const "
-                                       "std::string&, const "
-                                       "NodeParameters&)\n");
+                                       "you MUST add a constructor sign signature "
+                                       "(const std::string&, const NodeParameters&)\n");
 
     registerBuilder(CreateManifest<T>(ID, ports), CreateBuilder<T>());
+    // clang-format on
   }
 
   /// All the builders. Made available mostly for debug purposes.
@@ -442,6 +435,10 @@ public:
     }
   }
 
+  void clearSubstitutionRules();
+
+  void addSubstitutionRule(StringView filter, StringView substitution);
+
 private:
   std::unordered_map<std::string, NodeBuilder> builders_;
   std::unordered_map<std::string, TreeNodeManifest> manifests_;
@@ -451,7 +448,9 @@ private:
   std::shared_ptr<std::unordered_map<std::string, int>> scripting_enums_;
 
   std::shared_ptr<BT::Parser> parser_;
-  // clang-format on
+
+  std::unordered_map<std::string, std::string> substitution_rules_;
+
 };
 
 }   // namespace BT
