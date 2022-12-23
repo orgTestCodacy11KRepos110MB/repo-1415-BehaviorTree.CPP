@@ -1,0 +1,8 @@
+[requires]
+gtest/1.12.1
+cppzmq/4.9.0
+ncurses/6.3
+
+[generators]
+CMakeDeps
+CMakeToolchain

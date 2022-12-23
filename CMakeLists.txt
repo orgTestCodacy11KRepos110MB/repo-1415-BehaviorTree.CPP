@@ -27,6 +27,63 @@ option(BTCPP_UNIT_TESTS "Build the unit tests" ON)
 
 option(USE_V3_COMPATIBLE_NAMES  "Use some alias to compile more easily old 3.x code" OFF)
 
+#---- Determine the build system: ament / catkin / conan ----
+find_package(ament_cmake QUIET)
+
+if ( ament_cmake_FOUND )
+
+    add_definitions( -DUSING_ROS2 )
+    message(STATUS "------------------------------------------")
+    message(STATUS "BehaviourTree is being built using AMENT.")
+    message(STATUS "------------------------------------------")
+
+elseif( CATKIN_DEVEL_PREFIX OR CATKIN_BUILD_BINARY_PACKAGE)
+
+    set(catkin_FOUND 1)
+    add_definitions( -DUSING_ROS )
+    find_package(catkin REQUIRED COMPONENTS roslib)
+    find_package(GTest)
+
+    message(STATUS "------------------------------------------")
+    message(STATUS "BehaviourTree is being built using CATKIN.")
+    message(STATUS "------------------------------------------")
+
+    catkin_package(
+        INCLUDE_DIRS include # do not include "3rdparty" here
+        LIBRARIES ${BEHAVIOR_TREE_LIBRARY}
+        CATKIN_DEPENDS roslib
+        )
+
+else()
+
+    message(STATUS "------------------------------------------")
+    message(STATUS "BehaviourTree is being built using conan.")
+    message(STATUS "------------------------------------------")
+
+    # Download automatically, you can also just copy the conan.cmake file
+    if(NOT EXISTS "${CMAKE_BINARY_DIR}/conan.cmake")
+        message(STATUS "Downloading conan.cmake from https://github.com/conan-io/cmake-conan")
+        file(DOWNLOAD "https://raw.githubusercontent.com/conan-io/cmake-conan/master/conan.cmake"
+            "${CMAKE_BINARY_DIR}/conan.cmake")
+    endif()
+
+    include(${CMAKE_BINARY_DIR}/conan.cmake)
+
+    if(BTCPP_ENABLE_COROUTINES)
+        set(CONAN_FILE ${CMAKE_CURRENT_SOURCE_DIR}/conanfile_with_boost.txt)
+    else()
+        set(CONAN_FILE ${CMAKE_CURRENT_SOURCE_DIR}/conanfile.txt)
+    endif()
+        conan_cmake_run(CONANFILE ${CONAN_FILE}
+            BASIC_SETUP CMAKE_TARGETS
+            BUILD missing)
+
+    conan_cmake_autodetect(settings)
+
+    find_package(GTest REQUIRED)
+endif()
+
+
 #---- Include boost to add coroutines ----
 if(BTCPP_ENABLE_COROUTINES)
     find_package(Boost COMPONENTS coroutine QUIET)
@@ -61,11 +118,10 @@ endif()
 
 #---- Find other packages ----
 find_package(Threads REQUIRED)
-find_package(ZMQ)
+find_package(ZeroMQ)
 
-if( ZMQ_FOUND )
+if( ZeroMQ_FOUND )
     message(STATUS "ZeroMQ: found.")
-    add_definitions( -DZMQ_FOUND )
     list(APPEND BT_SOURCE src/loggers/bt_zmq_publisher.cpp)
 else()
     message(WARNING "ZeroMQ NOT found. Skipping the build of [PublisherZMQ] and [bt_recorder].")
@@ -77,49 +133,6 @@ set(BEHAVIOR_TREE_LIBRARY ${PROJECT_NAME})
 # at the current cmake version level
 if(POLICY CMP0057)
     cmake_policy(SET CMP0057 NEW)
-endif()
-
-find_package(ament_cmake QUIET)
-
-if ( ament_cmake_FOUND )
-
-    add_definitions( -DUSING_ROS2 )
-    message(STATUS "------------------------------------------")
-    message(STATUS "BehaviourTree is being built using AMENT.")
-    message(STATUS "------------------------------------------")
-
-elseif( CATKIN_DEVEL_PREFIX OR CATKIN_BUILD_BINARY_PACKAGE)
-
-    set(catkin_FOUND 1)
-    add_definitions( -DUSING_ROS )
-    find_package(catkin REQUIRED COMPONENTS roslib)
-    find_package(GTest)
-
-    message(STATUS "------------------------------------------")
-    message(STATUS "BehaviourTree is being built using CATKIN.")
-    message(STATUS "------------------------------------------")
-
-    catkin_package(
-        INCLUDE_DIRS include # do not include "3rdparty" here
-        LIBRARIES ${BEHAVIOR_TREE_LIBRARY}
-        CATKIN_DEPENDS roslib
-        )
-
-elseif(BTCPP_UNIT_TESTS)
-    if(${CMAKE_VERSION} VERSION_LESS "3.11.0")
-        find_package(GTest REQUIRED)
-    else()
-        include(FetchContent)
-        FetchContent_Declare(
-            googletest
-            GIT_REPOSITORY https://github.com/google/googletest.git
-            GIT_TAG        release-1.12.1)
-        # For Windows: Prevent overriding the parent project's compiler/linker settings
-        set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-        set(BUILD_GMOCK OFF CACHE BOOL "" FORCE)
-        set(BUILD_GTEST ON CACHE BOOL "" FORCE)
-        FetchContent_MakeAvailable(googletest)
-    endif()
 endif()
 
 
@@ -213,11 +226,11 @@ target_include_directories(${BEHAVIOR_TREE_LIBRARY}
         $<BUILD_INTERFACE:${BTCPP_EXTRA_INCLUDE_DIRS}>
     )
 
-if(ZMQ_FOUND)
+if(ZeroMQ_FOUND)
     target_link_libraries(${BEHAVIOR_TREE_LIBRARY} PRIVATE
-        ${ZMQ_LIBRARIES} )
+        ${ZeroMQ_LIBRARIES} )
     target_include_directories(${BEHAVIOR_TREE_LIBRARY} PRIVATE
-        ${ZMQ_INCLUDE_DIRS} )
+        ${ZeroMQ_INCLUDE_DIRS} )
     target_compile_definitions(${BEHAVIOR_TREE_LIBRARY} PRIVATE ZMQ_FOUND)
 endif()
 
