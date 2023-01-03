@@ -61,6 +61,16 @@ public:
                             "remapped")};
   }
 
+  void setSubtreeID(const std::string& ID)
+  {
+    subtree_id_ = ID;
+  }
+
+  const std::string& subtreeID() const
+  {
+    return subtree_id_;
+  }
+
   private:
   virtual BT::NodeStatus tick() override;
 
@@ -68,6 +78,11 @@ public:
   {
     return NodeType::SUBTREE;
   }
+
+
+  private:
+  std::string subtree_id_;
+
 };
 
 }   // namespace BT
